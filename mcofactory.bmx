@@ -31,27 +31,29 @@ Type TSettingsGUI
 	Field pngcrush:TGadget
 	
 	Rem
-	Constructor, builds the GUI
+	Builds the GUI
 	EndRem
-	Method New()
-		imageformat = CreatePanel(10, 0, 128, 64, mainwindow, PANEL_GROUP, "Image Format")
-		imageformat_png = CreateButton("PNG", 4, 4, 64, 16, imageformat, BUTTON_RADIO)
-		imageformat_jpeg = CreateButton("JPEG", 4, 20, 64, 16, imageformat, BUTTON_RADIO)	' Thanks Ion.
+	Function Create:TSettingsGUI(window:TGadget)
+		Local s:TSettingsGUI = New TSettingsGUI
+		s.imageformat = CreatePanel(10, 0, 128, 64, window, PANEL_GROUP, "Image Format")
+		s.imageformat_png = CreateButton("PNG", 4, 4, 64, 16, s.imageformat, BUTTON_RADIO)
+		s.imageformat_jpeg = CreateButton("JPEG", 4, 20, 64, 16, s.imageformat, BUTTON_RADIO)	' Thanks Ion.
 		
-		imgquality = CreatePanel(150, 0, 150, 64, mainwindow, PANEL_GROUP, "JPEG Quality")
-		imgquality_slider = CreateSlider(4, 4, 100, 32, imgquality, SLIDER_HORIZONTAL | SLIDER_TRACKBAR)
-		SetSliderRange(imgquality_slider, 1, 100)
-		imgquality_label = CreateLabel("1", 105, 5, 25, 16, imgquality, LABEL_FRAME | LABEL_RIGHT)
+		s.imgquality = CreatePanel(150, 0, 150, 64, window, PANEL_GROUP, "JPEG Quality")
+		s.imgquality_slider = CreateSlider(4, 4, 100, 32, s.imgquality, SLIDER_HORIZONTAL | SLIDER_TRACKBAR)
+		SetSliderRange(s.imgquality_slider, 1, 100)
+		s.imgquality_label = CreateLabel("1", 105, 5, 25, 16, s.imgquality, LABEL_FRAME | LABEL_RIGHT)
 		
-		bgcolor = CreatePanel(10, 80, 150, 64, mainwindow, PANEL_GROUP, "Background Color")
-		bgcolor_select = CreateButton("Color...", 80, 0, 60, 32, bgcolor)
-		bgcolor_preview = CreateLabel("", 10, 0, 30, 30, bgcolor, LABEL_SUNKENFRAME | LABEL_CENTER)
-	EndMethod
+		s.bgcolor = CreatePanel(10, 80, 150, 64, window, PANEL_GROUP, "Background Color")
+		s.bgcolor_select = CreateButton("Color...", 80, 0, 60, 32, s.bgcolor)
+		s.bgcolor_preview = CreateLabel("", 10, 0, 30, 30, s.bgcolor, LABEL_SUNKENFRAME | LABEL_CENTER)
+		Return s
+	EndFunction
 	
 	Rem
 	Adjusts the options to the values in the "settings" TMap
 	EndRem
-	Method ReloadSettings()
+	Method ReloadSettings(settings:TMap)
 		Select String(settings.ValueForKey("imgformat"))
 			Case "png"
 				SetButtonState(imageformat_png, True)
@@ -112,13 +114,13 @@ Type TRGBColor
 	EndMethod
 EndType
 
-Global settings:TMap
-Global guigadgets:TList = New TList
+Local settings:TMap = CreateSettingsMap()
 
-Global mainwindow:TGadget = CreateWindow("MCO Settings Factory", 0, 0, 400, 300, Null, WINDOW_TITLEBAR | WINDOW_MENU | WINDOW_STATUS | WINDOW_CENTER)
-BuildGUI()
+Local mainwindow:TGadget = CreateWindow("MCO Settings Factory", 0, 0, 400, 300, Null, WINDOW_TITLEBAR | WINDOW_MENU | WINDOW_STATUS | WINDOW_CENTER)
+BuildGUI(mainwindow)
 
-Local sgui:TSettingsGUI = New TSettingsGUI
+Local sgui:TSettingsGUI = TSettingsGUI.Create(mainwindow)
+sgui.ReloadSettings(settings)
 
 Repeat
 	WaitEvent()
@@ -132,30 +134,27 @@ Repeat
 Until EventID() = EVENT_WINDOWCLOSE And EventSource() = mainwindow
 
 Rem
-Adds menu items to the main menu, and adds them to a list for... I dunno. Probably going to be changed.
+Adds menu items to the main menu
 EndRem
-Function BuildGUI()
-	Local mainmenu:TGadget = WindowMenu(mainwindow)
+Function BuildGUI(window:TGadget)
+	Local mainmenu:TGadget = WindowMenu(window)
 	Local filemenu:TGadget = CreateMenu("File", 100, mainmenu)
-	guigadgets.AddLast(filemenu)
 	Local savemenu:TGadget = CreateMenu("Save", 101, filemenu)
-	guigadgets.AddLast(savemenu)
 	Local saveasmenu:TGadget = CreateMenu("Save as...", 102, filemenu)
-	guigadgets.AddLast(saveasmenu)
 	Local loadmenu:TGadget = CreateMenu("Load...", 103, filemenu)
-	guigadgets.AddLast(loadmenu)
-	UpdateWindowMenu(mainwindow)
+	UpdateWindowMenu(window)
 EndFunction
 
 Rem
 Clears the settings TMap and creates a new one with default values.
 The default values for the settings are taken from http://docs.overviewer.org
 EndRem
-Function ResetSettingsMap()
-	settings = CreateMap()
+Function CreateSettingsMap:TMap()
+	Local settings:TMap = CreateMap()
 	settings.Insert("imgquality", "95")
 	settings.Insert("imgformat", "png")
 	Local bgcolor:TRGBColor = New TRGBColor
 	bgcolor.FromHexString("#A1A1A1")
 	settings.Insert("bg-color", bgcolor)
+	Return settings
 EndFunction
