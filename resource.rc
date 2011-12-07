@@ -1,0 +1,28 @@
+1 24 "mcofactory.exe.manifest"
+1 VERSIONINFO 
+FILEVERSION 1,0,0,0 
+PRODUCTVERSION 1,0,0,0 
+FILEOS 0x40004
+FILETYPE 0x1
+{ 
+BLOCK "StringFileInfo" 
+{ 
+ BLOCK "040904b0" 
+ { 
+  VALUE "Comments", "Generates setting files for The Overviewer"
+  VALUE "CompanyName", "CounterPillow" 
+  VALUE "FileVersion", "1.0.0.0" 
+  VALUE "FileDescription", "MCO Settings Factory" 
+  // VALUE "InternalName", "Pillow is awesome" 
+  VALUE "LegalCopyright", "GPLv3" 
+  // VALUE "LegalTrademarks", "Legal stuff"
+  VALUE "OriginalFilename", "mcofactory.exe" 
+  VALUE "ProductName", "Minecraft Overviewer Settings Factory" 
+  VALUE "ProductVersion", "0.1.0.0" 
+ } 
+}
+BLOCK "VarFileInfo"	// I HAVE NO FUCKING CLUE WHAT THIS IS LOL
+{
+  VALUE "Translation", 0x0409, 0
+}
+}

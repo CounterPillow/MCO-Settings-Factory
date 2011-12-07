@@ -1,0 +1,1 @@
+windres -i "resource.rc" -o "resourceobject.o"
