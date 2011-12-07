@@ -122,7 +122,7 @@ Local sgui:TSettingsGUI = New TSettingsGUI
 
 Repeat
 	WaitEvent()
-	sgui.HandleEvent(e)	'proooobably going to be replaced by a hook. Who knows, stupid event shit.
+	sgui.HandleEvent(CurrentEvent)	'proooobably going to be replaced by a hook. Who knows, stupid event shit.
 	'this is just a little hack to play around.
 	If EventID() = EVENT_GADGETACTION And EventSource() = sgui.bgcolor_select
 		If RequestColor(RequestedRed(), RequestedGreen(), RequestedBlue()) = True Then
@@ -156,5 +156,6 @@ Function ResetSettingsMap()
 	settings.Insert("imgquality", "95")
 	settings.Insert("imgformat", "png")
 	Local bgcolor:TRGBColor = New TRGBColor
-	settings.Insert("bg-color", bgcolor.FromHexString("#A1A1A1"))
+	bgcolor.FromHexString("#A1A1A1")
+	settings.Insert("bg-color", bgcolor)
 EndFunction
