@@ -28,25 +28,33 @@ Type TSettingsGUI
 	Field bgcolor_select:TGadget
 	Field bgcolor_preview:TGadget
 	
-	Field pngcrush:TGadget
+	Field optimizeimg:TGadget
+	Field optimizeimg_usepngcrush:TGadget
+	Field optimizeimg_useadvdef:TGadget
+	Field optimizeimg_aggressive:TGadget	' Enabled if useadvdef is checked, otherwise disabled
 	
 	Rem
 	Builds the GUI
 	EndRem
 	Function Create:TSettingsGUI(window:TGadget)
 		Local s:TSettingsGUI = New TSettingsGUI
-		s.imageformat = CreatePanel(10, 0, 128, 64, window, PANEL_GROUP, "Image Format")
+		s.imageformat = CreatePanel(10, 0, 150, 80, window, PANEL_GROUP, "Image Format")
 		s.imageformat_png = CreateButton("PNG", 4, 4, 64, 16, s.imageformat, BUTTON_RADIO)
 		s.imageformat_jpeg = CreateButton("JPEG", 4, 20, 64, 16, s.imageformat, BUTTON_RADIO)	' Thanks Ion.
 		
-		s.imgquality = CreatePanel(150, 0, 150, 64, window, PANEL_GROUP, "JPEG Quality")
+		s.imgquality = CreatePanel(170, 0, 150, 80, window, PANEL_GROUP, "JPEG Quality")
 		s.imgquality_slider = CreateSlider(4, 4, 100, 32, s.imgquality, SLIDER_HORIZONTAL | SLIDER_TRACKBAR)
 		SetSliderRange(s.imgquality_slider, 1, 100)
 		s.imgquality_label = CreateLabel("1", 105, 5, 25, 16, s.imgquality, LABEL_FRAME | LABEL_RIGHT)
 		
-		s.bgcolor = CreatePanel(10, 80, 150, 64, window, PANEL_GROUP, "Background Color")
+		s.bgcolor = CreatePanel(10, 90, 150, 80, window, PANEL_GROUP, "Background Color")
 		s.bgcolor_select = CreateButton("Color...", 80, 0, 60, 32, s.bgcolor)
 		s.bgcolor_preview = CreateLabel("", 10, 0, 30, 30, s.bgcolor, LABEL_SUNKENFRAME | LABEL_CENTER)
+		
+		s.optimizeimg = CreatePanel(170, 90, 150, 80, window, PANEL_GROUP, "PNG Optimization")
+		s.optimizeimg_usepngcrush = CreateButton("Use pngcrush", 4, 4, 150, 16, s.optimizeimg, BUTTON_CHECKBOX)
+		s.optimizeimg_useadvdef = CreateButton("Use advdef", 4, 20, 150, 16, s.optimizeimg, BUTTON_CHECKBOX)
+		s.optimizeimg_aggressive = CreateButton("Be aggressive", 4, 36, 150, 16, s.optimizeimg, BUTTON_CHECKBOX)
 		Return s
 	EndFunction
 	
@@ -67,6 +75,25 @@ Type TSettingsGUI
 		EndSelect
 		
 		SetSliderValue(imgquality_slider, Int(String(settings.ValueForKey("imgquality"))))
+		SetGadgetText(imgquality_label, Int(String(settings.ValueForKey("imgquality"))))
+		
+		SetButtonState(optimizeimg_usepngcrush, False)
+		SetButtonState(optimizeimg_useadvdef, False)
+		SetButtonState(optimizeimg_aggressive, False)	
+		
+		Local optimize_level:Int = Int(String(settings.ValueForKey("optimize-img")))
+		If optimize_level > 0 And optimize_level <= 3
+			SetButtonState(optimizeimg_usepngcrush, True)
+		EndIf
+		If optimize_level > 1 And optimize_level <= 3
+			SetButtonState(optimizeimg_useadvdef, True)
+		EndIf
+		If optimize_level > 2 And optimize_level <= 3
+			SetButtonState(optimizeimg_aggressive, True)
+		EndIf
+		
+		Local bgcolor:TRGBColor = TRGBColor(settings.ValueForKey("bg-color"))
+		SetGadgetColor(bgcolor_preview, bgcolor.rgb[0], bgcolor.rgb[1], bgcolor.rgb[2])
 	EndMethod
 	
 	Rem
@@ -156,5 +183,6 @@ Function CreateSettingsMap:TMap()
 	Local bgcolor:TRGBColor = New TRGBColor
 	bgcolor.FromHexString("#A1A1A1")
 	settings.Insert("bg-color", bgcolor)
+	settings.Insert("optimize-img", "")
 	Return settings
 EndFunction
