@@ -27,6 +27,7 @@ Type TSettingsGUI
 	Field bgcolor:TGadget
 	Field bgcolor_select:TGadget
 	Field bgcolor_preview:TGadget
+	Field bgcolor_color:TRGBColor
 	
 	Field optimizeimg:TGadget
 	Field optimizeimg_usepngcrush:TGadget
@@ -49,7 +50,13 @@ Type TSettingsGUI
 		
 		s.bgcolor = CreatePanel(10, 90, 150, 80, window, PANEL_GROUP, "Background Color")
 		s.bgcolor_select = CreateButton("Color...", 80, 0, 60, 32, s.bgcolor)
-		s.bgcolor_preview = CreateLabel("", 10, 0, 30, 30, s.bgcolor, LABEL_SUNKENFRAME | LABEL_CENTER)
+		's.bgcolor_preview = CreateLabel("", 10, 0, 30, 30, s.bgcolor, LABEL_SUNKENFRAME | LABEL_CENTER)
+		s.bgcolor_preview = CreatePanel(10, 0, 30, 30, s.bgcolor, PANEL_SUNKEN, "")
+		s.bgcolor_color:TRGBColor = New TRGBColor
+		' Now you may ask: "But Pillow, why didn't you just access the color the _preview gadget has?"
+		' To that, I can answer: Because you can't. Yes, for some fucking reason you _CAN_ set a color, but
+		' you can't retrieve it easily. There is a _bgcolor var in the windows driver, BUT YOU CAN'T FUCKING
+		' ACCESS IT FROM OUTSIDE. I hate you, Sibly. I hate you and your modules.
 		
 		s.optimizeimg = CreatePanel(170, 90, 150, 80, window, PANEL_GROUP, "PNG Optimization")
 		s.optimizeimg_usepngcrush = CreateButton("Use pngcrush", 4, 4, 150, 16, s.optimizeimg, BUTTON_CHECKBOX)
@@ -94,6 +101,25 @@ Type TSettingsGUI
 		
 		Local bgcolor:TRGBColor = TRGBColor(settings.ValueForKey("bg-color"))
 		SetGadgetColor(bgcolor_preview, bgcolor.rgb[0], bgcolor.rgb[1], bgcolor.rgb[2])
+	EndMethod
+	
+	Rem
+	Saves the values of the GUI into the Map
+	EndRem
+	Method SaveIntoMap(settings:TMap)
+		'Save Imageformat
+		If ButtonState(imageformat_jpeg) = True Then
+			settings.Insert("imgformat", "jpg")
+			'Image quality
+			settings.Insert("imgquality", String(SliderValue(imgquality_slider)))
+		Else
+			settings.Insert("imgformat", "png")
+			'Size optimizations
+			settings.Insert("optimize-img", String( ButtonState(optimizeimg_usepngcrush) + ..
+													ButtonState(optimizeimg_useadvdef) + ..
+													ButtonState(optimizeimg_aggressive)))	' yay!
+		EndIf
+		settings.Insert("bg-color", bgcolor_color)
 	EndMethod
 	
 	Rem
@@ -147,17 +173,24 @@ Local mainwindow:TGadget = CreateWindow("MCO Settings Factory", 0, 0, 400, 300, 
 BuildGUI(mainwindow)
 
 Local sgui:TSettingsGUI = TSettingsGUI.Create(mainwindow)
+
 sgui.ReloadSettings(settings)
 
 Repeat
+
 	WaitEvent()
 	sgui.HandleEvent(CurrentEvent)	'proooobably going to be replaced by a hook. Who knows, stupid event shit.
-	'this is just a little hack to play around.
+	
+	'this is just a little hack to play around. Will be replaced by serious stuff
 	If EventID() = EVENT_GADGETACTION And EventSource() = sgui.bgcolor_select
 		If RequestColor(RequestedRed(), RequestedGreen(), RequestedBlue()) = True Then
 			SetGadgetColor(sgui.bgcolor_preview, RequestedRed(), RequestedGreen(), RequestedBlue())
+			sgui.bgcolor_color.rgb[0] = RequestedRed()
+			sgui.bgcolor_color.rgb[1] = RequestedGreen()
+			sgui.bgcolor_color.rgb[2] = RequestedBlue()
 		EndIf
 	EndIf
+	
 Until EventID() = EVENT_WINDOWCLOSE And EventSource() = mainwindow
 
 Rem
@@ -185,4 +218,19 @@ Function CreateSettingsMap:TMap()
 	settings.Insert("bg-color", bgcolor)
 	settings.Insert("optimize-img", "")
 	Return settings
+EndFunction
+
+Function SaveSettings(path:String, settings:TMap)
+	Local stream:TStream = WriteFile(path)
+	Local key:Object
+	Local val:Object
+	For key = EachIn MapKeys(settings)
+		val = settings.ValueForKey(key)
+		If String(val) = "bg-color" 
+			stream.WriteLine("bg-color" + "=" + TRGBColor(val).ToHexString())
+		ElseIf val <> Null Then
+			stream.WriteLine(String(key) + "=" + String(val))
+		EndIf
+	Next
+	stream.Close()
 EndFunction
