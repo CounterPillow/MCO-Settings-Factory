@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=MCO Settings Factory
+Comment=Generates Settings Files For The Overviewer
+Exec=mcofactory
+#Icon=icon.png
