@@ -17,11 +17,16 @@ Type TSettingsGUI
 	Field imageformat_png:TGadget
 	Field imageformat_jpeg:TGadget
 	
+	Field tabber:TGadget
+	Field tabs:TGadget[3]
+	Field currenttab:TGadget
+	
 	'Image quality slider GUI items
 	'WILL BE DISABLED IF IMAGEFORMAT != JPEG
 	Field imgquality:TGadget
 	Field imgquality_slider:TGadget
 	Field imgquality_label:TGadget
+	Field imgquality_value:Int
 	
 	'Background color selection GUI items
 	Field bgcolor:TGadget
@@ -39,16 +44,30 @@ Type TSettingsGUI
 	EndRem
 	Function Create:TSettingsGUI(window:TGadget)
 		Local s:TSettingsGUI = New TSettingsGUI
-		s.imageformat = CreatePanel(10, 0, 150, 80, window, PANEL_GROUP, "Image Format")
+		
+		s.tabber = CreateTabber(0, 0, ClientWidth(window), ClientHeight(window), window)
+		
+		AddGadgetItem(s.tabber, "General Settings")
+		AddGadgetItem(s.tabber, "World Setup")
+		AddGadgetItem(s.tabber, "Rendermode Setup")
+		
+		For Local i:Int = 0 To 2
+			s.tabs[i] = CreatePanel(0, 0, ClientWidth(s.tabber), ClientHeight(s.tabber), s.tabber)
+			HideGadget(s.tabs[i])
+		Next
+		s.currenttab = s.tabs[0]
+		ShowGadget(s.currenttab)
+		
+		s.imageformat = CreatePanel(10, 0, 150, 80, s.tabs[0], PANEL_GROUP, "Image Format")
 		s.imageformat_png = CreateButton("PNG", 4, 4, 64, 16, s.imageformat, BUTTON_RADIO)
 		s.imageformat_jpeg = CreateButton("JPEG", 4, 20, 64, 16, s.imageformat, BUTTON_RADIO)	' Thanks Ion.
 		
-		s.imgquality = CreatePanel(170, 0, 150, 80, window, PANEL_GROUP, "JPEG Quality")
+		s.imgquality = CreatePanel(170, 0, 150, 80, s.tabs[0], PANEL_GROUP, "JPEG Quality")
 		s.imgquality_slider = CreateSlider(4, 4, 100, 32, s.imgquality, SLIDER_HORIZONTAL | SLIDER_TRACKBAR)
 		SetSliderRange(s.imgquality_slider, 1, 100)
 		s.imgquality_label = CreateLabel("1", 105, 5, 25, 16, s.imgquality, LABEL_FRAME | LABEL_RIGHT)
 		
-		s.bgcolor = CreatePanel(10, 90, 150, 80, window, PANEL_GROUP, "Background Color")
+		s.bgcolor = CreatePanel(10, 90, 150, 80, s.tabs[0], PANEL_GROUP, "Background Color")
 		s.bgcolor_select = CreateButton("Color...", 80, 0, 60, 32, s.bgcolor)
 		's.bgcolor_preview = CreateLabel("", 10, 0, 30, 30, s.bgcolor, LABEL_SUNKENFRAME | LABEL_CENTER)
 		s.bgcolor_preview = CreatePanel(10, 0, 30, 30, s.bgcolor, PANEL_SUNKEN, "")
@@ -58,7 +77,7 @@ Type TSettingsGUI
 		' you can't retrieve it easily. There is a _bgcolor var in the windows driver, BUT YOU CAN'T FUCKING
 		' ACCESS IT FROM OUTSIDE. I hate you, Sibly. I hate you and your modules.
 		
-		s.optimizeimg = CreatePanel(170, 90, 150, 80, window, PANEL_GROUP, "PNG Optimization")
+		s.optimizeimg = CreatePanel(170, 90, 150, 80, s.tabs[0], PANEL_GROUP, "PNG Optimization")
 		s.optimizeimg_usepngcrush = CreateButton("Use pngcrush", 4, 4, 150, 16, s.optimizeimg, BUTTON_CHECKBOX)
 		s.optimizeimg_useadvdef = CreateButton("Use advdef", 4, 20, 150, 16, s.optimizeimg, BUTTON_CHECKBOX)
 		s.optimizeimg_aggressive = CreateButton("Be aggressive", 4, 36, 150, 16, s.optimizeimg, BUTTON_CHECKBOX)
@@ -71,22 +90,30 @@ Type TSettingsGUI
 	Method ReloadSettings(settings:TMap)
 		Select String(settings.ValueForKey("imgformat"))
 			Case "png"
+				DisableGadget(Self.imgquality)
+				EnableGadget(Self.optimizeimg)
 				SetButtonState(imageformat_png, True)
 				SetButtonState(imageformat_jpeg, False)
 			Case "jpg"
+				DisableGadget(optimizeimg)
+				EnableGadget(imgquality)
 				SetButtonState(imageformat_png, False)
 				SetButtonState(imageformat_jpeg, True)
 			Default
+				EnableGadget(optimizeimg)
+				EnableGadget(imgquality)
 				SetButtonState(imageformat_png, False)
 				SetButtonState(imageformat_jpeg, False)
 		EndSelect
 		
-		SetSliderValue(imgquality_slider, Int(String(settings.ValueForKey("imgquality"))))
-		SetGadgetText(imgquality_label, Int(String(settings.ValueForKey("imgquality"))))
+		imgquality_value = Int(String(settings.ValueForKey("imgquality")))
+		SetSliderValue(imgquality_slider, imgquality_value)
+		SetGadgetText(imgquality_label, imgquality_value)
 		
 		SetButtonState(optimizeimg_usepngcrush, False)
 		SetButtonState(optimizeimg_useadvdef, False)
-		SetButtonState(optimizeimg_aggressive, False)	
+		SetButtonState(optimizeimg_aggressive, False)
+		DisableGadget(optimizeimg_aggressive)
 		
 		Local optimize_level:Int = Int(String(settings.ValueForKey("optimize-img")))
 		If optimize_level > 0 And optimize_level <= 3
@@ -94,6 +121,7 @@ Type TSettingsGUI
 		EndIf
 		If optimize_level > 1 And optimize_level <= 3
 			SetButtonState(optimizeimg_useadvdef, True)
+			EnableGadget(optimizeimg_aggressive)
 		EndIf
 		If optimize_level > 2 And optimize_level <= 3
 			SetButtonState(optimizeimg_aggressive, True)
@@ -126,6 +154,45 @@ Type TSettingsGUI
 	Does all the event handling for the GUI
 	EndRem
 	Method HandleEvent(e:TEvent)
+		Select e.id
+			Case EVENT_GADGETACTION
+				Select e.source
+					' Tab switched
+					Case tabber
+						If currenttab <> tabs[e.data]
+							HideGadget(currenttab)
+							currenttab = tabs[e.data]
+							ShowGadget(currenttab)
+						EndIf
+					
+					' Image Quality and Optimization options
+					Case imageformat_jpeg
+						DisableGadget(optimizeimg)
+						EnableGadget(imgquality)
+					Case imageformat_png
+						DisableGadget(imgquality)
+						EnableGadget(optimizeimg)
+					Case optimizeimg_useadvdef
+						If ButtonState(optimizeimg_useadvdef) = True
+							EnableGadget(optimizeimg_aggressive)
+						Else
+							DisableGadget(optimizeimg_aggressive)
+						EndIf
+					' Slider
+					Case imgquality_slider
+						imgquality_value = SliderValue(imgquality_slider)
+						SetGadgetText(imgquality_label, imgquality_value)
+					
+					' Bg color
+					Case bgcolor_select
+						If RequestColor(RequestedRed(), RequestedGreen(), RequestedBlue()) = True Then
+							SetGadgetColor(bgcolor_preview, RequestedRed(), RequestedGreen(), RequestedBlue())
+							bgcolor_color.rgb[0] = RequestedRed()
+							bgcolor_color.rgb[1] = RequestedGreen()
+							bgcolor_color.rgb[2] = RequestedBlue()
+						EndIf
+				EndSelect
+		EndSelect
 		'<lots of awesome stuff here>
 	EndMethod
 EndType
@@ -197,24 +264,12 @@ BuildGUI(mainwindow)
 
 Local sgui:TSettingsGUI = TSettingsGUI.Create(mainwindow)
 
-' TODO: Redesign GUI for multiworld/multirender. I'm thinking of tabs.
-
 sgui.ReloadSettings(settings)
 
 Repeat
 
 	WaitEvent()
-	sgui.HandleEvent(CurrentEvent)	'proooobably going to be replaced by a hook. Who knows, stupid event shit.
-	
-	'this is just a little hack to play around. Will be replaced by serious stuff
-	If EventID() = EVENT_GADGETACTION And EventSource() = sgui.bgcolor_select
-		If RequestColor(RequestedRed(), RequestedGreen(), RequestedBlue()) = True Then
-			SetGadgetColor(sgui.bgcolor_preview, RequestedRed(), RequestedGreen(), RequestedBlue())
-			sgui.bgcolor_color.rgb[0] = RequestedRed()
-			sgui.bgcolor_color.rgb[1] = RequestedGreen()
-			sgui.bgcolor_color.rgb[2] = RequestedBlue()
-		EndIf
-	EndIf
+	sgui.HandleEvent(CurrentEvent) ' "Can't handle this dude" -- Charlie Sheen
 	
 Until EventID() = EVENT_WINDOWCLOSE And EventSource() = mainwindow
 
@@ -245,6 +300,7 @@ Function CreateSettingsMap:TMap()
 	Return settings
 EndFunction
 
+' TODO: Redo this.
 Function SaveSettings(path:String, settings:TMap)
 	Local stream:TStream = WriteFile(path)
 	Local key:Object
