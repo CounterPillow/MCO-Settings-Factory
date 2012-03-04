@@ -167,12 +167,37 @@ Type TRGBColor
 	EndMethod
 EndType
 
+Type TWorld
+	Field path:String
+	Field name:String
+EndType
+
+Type TRender
+	Field name:String
+	Field outputdir:String
+	Field config:TMap
+	
+	Rem
+		<notetofutureself reason="lazy">
+		Okay so here's the thing;
+		I'll store TWorld objects for "world" in the config TMap, instead of the world name
+		This gives me a bit more flexible access
+		</notetofutureself>
+	EndRem
+	
+	Method New()
+		Self.config:TMap = New TMap
+	EndMethod
+EndType
+
 Local settings:TMap = CreateSettingsMap()
 
 Local mainwindow:TGadget = CreateWindow("MCO Settings Factory", 0, 0, 400, 300, Null, WINDOW_TITLEBAR | WINDOW_MENU | WINDOW_STATUS | WINDOW_CENTER)
 BuildGUI(mainwindow)
 
 Local sgui:TSettingsGUI = TSettingsGUI.Create(mainwindow)
+
+' TODO: Redesign GUI for multiworld/multirender. I'm thinking of tabs.
 
 sgui.ReloadSettings(settings)
 
